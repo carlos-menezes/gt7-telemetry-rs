@@ -1,6 +1,7 @@
 use salsa20::cipher::{KeyIvInit, StreamCipher, StreamCipherSeek};
 use salsa20::Salsa20;
 
+use crate::errors::CryptError;
 use crate::packet::PACKET_SIZE;
 
 const KEY: &[u8] = b"Simulator Interface Packet GT7 ver 0.0";
@@ -8,14 +9,14 @@ const KEY: &[u8] = b"Simulator Interface Packet GT7 ver 0.0";
 pub struct Crypt {}
 
 pub trait Cryptable {
-    fn decrypt(bytes: &[u8; PACKET_SIZE]) -> [u8; PACKET_SIZE];
+    fn decrypt(bytes: &[u8; PACKET_SIZE]) -> Result<[u8; PACKET_SIZE], CryptError>;
 }
 
 impl Cryptable for Crypt {
-    fn decrypt(bytes: &[u8; PACKET_SIZE]) -> [u8; PACKET_SIZE] {
+    fn decrypt(bytes: &[u8; PACKET_SIZE]) -> Result<[u8; PACKET_SIZE], CryptError> {
         // Extract original initialization vector (IV)
-        let original_init_vector: [u8; 4] =
-            bytes[0x40..0x44].try_into().expect("Invalid IV length");
+        // We can unwrap here because the Ok variant will always be returned
+        let original_init_vector: [u8; 4] = bytes[0x40..0x44].try_into().unwrap();
 
         // Combine the IV with a constant value
         let iv1 = u32::from_le_bytes(original_init_vector);
@@ -31,11 +32,10 @@ impl Cryptable for Crypt {
 
         // Check the magic value to validate decryption
         let magic = u32::from_le_bytes(decrypted_buf[0x0..0x4].try_into().unwrap());
-        // TODO: this is not idiomatic Rust. let's return a Result with a custom error
         if magic != 0x47375330 {
-            [0u8; PACKET_SIZE]
+            return Err(CryptError::InvalidMagicValue());
         } else {
-            decrypted_buf
+            Ok(decrypted_buf)
         }
     }
 }

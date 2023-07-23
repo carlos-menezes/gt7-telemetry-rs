@@ -5,7 +5,7 @@ use std::{
 
 use crate::{
     crypt::{Crypt, Cryptable},
-    packet::PACKET_SIZE,
+    packet::{HEARTBEAT_PACKET_DATA, PACKET_SIZE},
 };
 
 const RECEIVE_PORT: u16 = 33740;
@@ -40,6 +40,7 @@ impl Client {
     }
 
     fn send_heartbeat_packet(&self) -> io::Result<usize> {
-        self.socket.send_to(b"A", &self.destination)
+        self.socket
+            .send_to(HEARTBEAT_PACKET_DATA, &self.destination)
     }
 }

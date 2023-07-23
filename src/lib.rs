@@ -1,5 +1,6 @@
 mod client;
 mod crypt;
+mod errors;
 mod packet;
 
 pub fn add(left: usize, right: usize) -> usize {
