@@ -5,6 +5,7 @@ use crate::errors::CryptError;
 use crate::packet::PACKET_SIZE;
 
 const KEY: &[u8] = b"Simulator Interface Packet GT7 ver 0.0";
+pub const MAGIC_VALUE: u32 = 0x47375330;
 
 pub struct Crypt {}
 
@@ -32,7 +33,7 @@ impl Cryptable for Crypt {
 
         // Check the magic value to validate decryption
         let magic = u32::from_le_bytes(decrypted_buf[0x0..0x4].try_into().unwrap());
-        if magic != 0x47375330 {
+        if magic != MAGIC_VALUE {
             return Err(CryptError::InvalidMagicValue());
         } else {
             Ok(decrypted_buf)
