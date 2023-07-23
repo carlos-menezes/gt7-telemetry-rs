@@ -31,6 +31,7 @@ impl Cryptable for Crypt {
 
         // Check the magic value to validate decryption
         let magic = u32::from_le_bytes(decrypted_buf[0x0..0x4].try_into().unwrap());
+        // TODO: this is not idiomatic Rust. let's return a Result with a custom error
         if magic != 0x47375330 {
             [0u8; PACKET_SIZE]
         } else {
