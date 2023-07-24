@@ -1,3 +1,4 @@
+use bitflags::bitflags;
 use byteorder::{LittleEndian, ReadBytesExt};
 use serde::{Deserialize, Serialize};
 use std::{
@@ -41,7 +42,7 @@ pub struct Packet {
     pub alert_rpm_min: i16,
     pub alert_rpm_max: i16,
     pub calculated_max_speed: i16,
-    pub flags: Flags,
+    pub flags: Option<Flags>,
     pub current_gear: u8,
     pub suggested_gear: u8,
     pub throttle: u8,
@@ -127,7 +128,8 @@ impl Packet {
         let alert_rpm_max = cursor.read_i16::<LittleEndian>()?;
         let calculated_max_speed = cursor.read_i16::<LittleEndian>()?;
 
-        let flags = Flags::try_from(cursor.read_i16::<LittleEndian>()?)?;
+        let flag_bits = cursor.read_u16::<LittleEndian>()?;
+        let flags = Flags::from_bits(flag_bits);
 
         let bits = cursor.read_u8()?;
         let current_gear = bits & 0b1111;
@@ -236,46 +238,22 @@ impl Packet {
     }
 }
 
-#[derive(Serialize, Deserialize)]
-#[repr(i16)]
-pub enum Flags {
-    None = 0,
-    CarOnTrack = 1 << 0,
-    Paused = 1 << 1,
-    LoadingOrProcessing = 1 << 2,
-    InGear = 1 << 3,
-    HasTurbo = 1 << 4,
-    RevLimiterBlinkAlertActive = 1 << 5,
-    HandBrakeActive = 1 << 6,
-    LightsActive = 1 << 7,
-    HighBeamActive = 1 << 8,
-    LowBeamActive = 1 << 9,
-    ASMActive = 1 << 10,
-    TCSActive = 1 << 11,
-}
-
-impl TryFrom<i16> for Flags {
-    type Error = PacketError;
-
-    fn try_from(v: i16) -> Result<Self, Self::Error> {
-        println!("flag: {v}");
-        match v {
-            x if x == Flags::None as i16 => Ok(Flags::None),
-            x if x == Flags::CarOnTrack as i16 => Ok(Flags::CarOnTrack),
-            x if x == Flags::Paused as i16 => Ok(Flags::Paused),
-            x if x == Flags::LoadingOrProcessing as i16 => Ok(Flags::LoadingOrProcessing),
-            x if x == Flags::InGear as i16 => Ok(Flags::InGear),
-            x if x == Flags::HasTurbo as i16 => Ok(Flags::HasTurbo),
-            x if x == Flags::RevLimiterBlinkAlertActive as i16 => {
-                Ok(Flags::RevLimiterBlinkAlertActive)
-            }
-            x if x == Flags::HandBrakeActive as i16 => Ok(Flags::HandBrakeActive),
-            x if x == Flags::LightsActive as i16 => Ok(Flags::LightsActive),
-            x if x == Flags::HighBeamActive as i16 => Ok(Flags::HighBeamActive),
-            x if x == Flags::LowBeamActive as i16 => Ok(Flags::LowBeamActive),
-            x if x == Flags::ASMActive as i16 => Ok(Flags::ASMActive),
-            x if x == Flags::TCSActive as i16 => Ok(Flags::TCSActive),
-            _ => Err(PacketError::UnknownFlag()),
-        }
+bitflags! {
+    #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+    #[serde(transparent)]
+    pub struct Flags: u16 {
+        const None = 0;
+        const CarOnTrack = 1 << 0;
+        const Paused = 1 << 1;
+        const LoadingOrProcessing = 1 << 2;
+        const InGear = 1 << 3;
+        const HasTurbo = 1 << 4;
+        const RevLimiterBlinkAlertActive = 1 << 5;
+        const HandBrakeActive = 1 << 6;
+        const LightsActive = 1 << 7;
+        const HighBeamActive = 1 << 8;
+        const LowBeamActive = 1 << 9;
+        const ASMActive = 1 << 10;
+        const TCSActive = 1 << 11;
     }
 }

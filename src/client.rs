@@ -36,7 +36,14 @@ impl Client {
             self.socket.recv(&mut buf)?;
             let decrypted_packet = Crypt::decrypt(&mut buf)?;
             let packet = Packet::parse(decrypted_packet)?;
-            println!("{} :: {}", packet.packet_id, packet.suggested_gear)
+            // println!(
+            //     "\r{} :: {} <-> {} :: {} {}\r",
+            //     packet.packet_id,
+            //     packet.current_gear,
+            //     packet.suggested_gear,
+            //     packet.throttle,
+            //     packet.brake
+            // )
         }
     }
 
