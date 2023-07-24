@@ -1,4 +1,4 @@
-use salsa20::cipher::{KeyIvInit, StreamCipher, StreamCipherSeek};
+use salsa20::cipher::{KeyIvInit, StreamCipher};
 use salsa20::Salsa20;
 
 use crate::errors::CryptError;

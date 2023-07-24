@@ -1,11 +1,16 @@
 use byteorder::{LittleEndian, ReadBytesExt};
-use std::{io::Cursor, mem};
+use serde::{Deserialize, Serialize};
+use std::{
+    io::{Cursor, Seek, SeekFrom},
+    mem,
+};
 
 use crate::{crypt::MAGIC_VALUE, errors::PacketError};
 
 pub const PACKET_SIZE: usize = 0x198;
 pub const HEARTBEAT_PACKET_DATA: &[u8; 1] = b"A";
 
+#[derive(Serialize, Deserialize)]
 pub struct Packet {
     pub position: [f32; 3],
     pub velocity: [f32; 3],
@@ -64,7 +69,8 @@ pub struct Packet {
 }
 
 impl Packet {
-    fn parse(packet: [u8; PACKET_SIZE]) -> Result<Self, PacketError> {
+    // fn validate(packet: &[u8; PACKET_SIZE])
+    pub fn parse(packet: [u8; PACKET_SIZE]) -> Result<Self, PacketError> {
         let mut cursor = Cursor::new(packet);
         let magic = cursor.read_u32::<LittleEndian>()?;
         if magic != MAGIC_VALUE {
@@ -96,7 +102,7 @@ impl Packet {
         let engine_rpm = cursor.read_f32::<LittleEndian>()?;
 
         // Skip IV
-        cursor.set_position(cursor.position() + (mem::size_of::<usize>() as u64));
+        cursor.seek(SeekFrom::Current(mem::size_of::<i32>() as i64))?;
 
         let gas_level = cursor.read_f32::<LittleEndian>()?;
         let gas_capacity = cursor.read_f32::<LittleEndian>()?;
@@ -120,6 +126,7 @@ impl Packet {
         let alert_rpm_min = cursor.read_i16::<LittleEndian>()?;
         let alert_rpm_max = cursor.read_i16::<LittleEndian>()?;
         let calculated_max_speed = cursor.read_i16::<LittleEndian>()?;
+
         let flags = Flags::try_from(cursor.read_i16::<LittleEndian>()?)?;
 
         let bits = cursor.read_u8()?;
@@ -153,13 +160,13 @@ impl Packet {
         let tire_rl_suspension_height = cursor.read_f32::<LittleEndian>()?;
         let tire_rr_suspension_height = cursor.read_f32::<LittleEndian>()?;
 
-        cursor.set_position(cursor.position() + (mem::size_of::<usize>() as u64 * 8));
+        cursor.set_position(cursor.position() + (mem::size_of::<i32>() as u64 * 8));
         let clutch_pedal = cursor.read_f32::<LittleEndian>()?;
         let clutch_engagement = cursor.read_f32::<LittleEndian>()?;
         let rpm_from_clutch_to_gearbox = cursor.read_f32::<LittleEndian>()?;
         let transmission_top_speed = cursor.read_f32::<LittleEndian>()?;
         // There is an eight gear which the game overrides without bound checking.
-        // For cars with more than 7 gears (e.g. LC500), the `car_code` is overriden.
+        // For cars with more than 7 gears (e.g. LC500), the `car_code` is overridden.
 
         let mut gear_ratios: [f32; 7] = [0f32; 7];
         for i in 0..7 {
@@ -229,6 +236,7 @@ impl Packet {
     }
 }
 
+#[derive(Serialize, Deserialize)]
 #[repr(i16)]
 pub enum Flags {
     None = 0,
@@ -250,6 +258,7 @@ impl TryFrom<i16> for Flags {
     type Error = PacketError;
 
     fn try_from(v: i16) -> Result<Self, Self::Error> {
+        println!("flag: {v}");
         match v {
             x if x == Flags::None as i16 => Ok(Flags::None),
             x if x == Flags::CarOnTrack as i16 => Ok(Flags::CarOnTrack),

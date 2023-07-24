@@ -1,11 +1,12 @@
 use std::{
+    error::Error,
     io,
     net::{AddrParseError, IpAddr, SocketAddr, UdpSocket},
 };
 
 use crate::{
     crypt::{Crypt, Cryptable},
-    packet::{HEARTBEAT_PACKET_DATA, PACKET_SIZE},
+    packet::{Packet, HEARTBEAT_PACKET_DATA, PACKET_SIZE},
 };
 
 const RECEIVE_PORT: u16 = 33740;
@@ -28,14 +29,14 @@ impl Client {
         })
     }
 
-    pub fn start(&self) -> Result<(), io::Error> {
+    pub fn start(&self) -> Result<(), Box<dyn std::error::Error>> {
         self.send_heartbeat_packet()?;
         let mut buf = [0u8; PACKET_SIZE];
         loop {
-            let bytes_received = &self.socket.recv(&mut buf)?;
-            let decrypted = Crypt::decrypt(&mut buf);
-            // TODO: do more
-            println!("{:#?}", decrypted)
+            self.socket.recv(&mut buf)?;
+            let decrypted_packet = Crypt::decrypt(&mut buf)?;
+            let packet = Packet::parse(decrypted_packet)?;
+            println!("{} :: {}", packet.packet_id, packet.suggested_gear)
         }
     }
 
